@@ -361,6 +361,11 @@ class DeskHandler(BaseHTTPRequestHandler):
             self.send_json(200, {"stopped":True,"message":"Claw Desk is shutting down."})
             threading.Thread(target=self.server.shutdown,daemon=True).start()
             return
+        if path == "/api/google/connect":
+            try:
+                return self.send_json(200,{"url":self.server.google.start()})
+            except GoogleError as exc:
+                return self.feature_error(exc)
         try:
             limit = 11_000_000 if path in ("/api/files/upload","/api/voice/transcribe") else MAX_BODY
             payload = self.read_payload(limit)
@@ -371,8 +376,6 @@ class DeskHandler(BaseHTTPRequestHandler):
                 return self.send_json(200,self.server.attachments.put(payload))
             if path == "/api/voice/transcribe":
                 return self.send_json(200,transcribe(payload))
-            if path == "/api/google/connect":
-                return self.send_json(200,{"url":self.server.google.start()})
             if path == "/api/google/draft":
                 return self.send_json(200,self.server.google.create_draft(
                     payload.get("to"),payload.get("subject"),payload.get("body"),
