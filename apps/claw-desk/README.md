@@ -17,7 +17,7 @@ Claw Desk is a **mobile-first, installable web companion** for this repo's exist
 On the **trusted host**, not on the iPhone:
 
 ```bash
-git clone https://github.com/hollowaywalter6-droid/claw-code.git
+git clone --branch feat/claw-desk-web-app https://github.com/hollowaywalter6-droid/claw-code.git
 cd claw-code/rust
 cargo build -p rusty-claude-cli
 cd ..
