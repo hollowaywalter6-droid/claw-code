@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b111d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Claw Desk">
+  <meta name="description" content="Your mobile AI workspace powered by the Claw CLI.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon-180.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/app.css">
+  <title>Claw Desk — AI workspace</title>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" aria-label="Workspace">
+    <a class="brand" href="/" aria-label="Claw Desk home">
+      <span class="brandmark">C<span class="dot">.</span></span>
+      <span><strong>CLAW</strong><small>DESK / MOBILE</small></span>
+    </a>
+    <div class="sidebar-group">
+      <p class="eyebrow">WORKSPACE</p>
+      <span class="nav-item active"><span aria-hidden="true">◈</span> Assistant <small>01</small></span>
+      <button class="nav-item button-nav" id="check-status" type="button"><span aria-hidden="true">◎</span> Check status <small>↗</small></button>
+      <button class="nav-item button-nav" id="run-doctor" type="button"><span aria-hidden="true">✳</span> Diagnostics <small>↗</small></button>
+      <button class="nav-item button-nav" id="clear-chat-side" type="button"><span aria-hidden="true">⊘</span> Clear conversation <small>×</small></button>
+    </div>
+    <div class="sidebar-bottom">
+      <span class="eyebrow">PRIVACY FIRST</span>
+      <p>One trusted device runs Claw. Your phone is the interface. API keys never need to be entered here.</p>
+      <span class="sidebar-meta">v0.1 · Local / Private HTTPS</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="top-identity">
+        <div class="mobile-logo">C<span class="dot">.</span></div>
+        <div><strong>Claw Desk</strong><span class="sub">Your personal AI workspace</span></div>
+      </div>
+      <div class="top-actions">
+        <button id="kill-switch" class="kill-switch" disabled type="button" aria-label="Emergency shut down Claw Desk host" title="Owner emergency power switch">⏻</button>
+        <span id="connection" class="connection connecting" role="status"><i></i> Connecting</span>
+        <button id="mobile-menu" class="icon-button mobile-only" type="button" aria-label="Open tools" aria-expanded="false">☷</button>
+      </div>
+    </header>
+
+    <nav class="mobile-tools" id="mobile-tools" aria-label="Tools" hidden>
+      <button type="button" id="status-mobile">Status</button>
+      <button type="button" id="doctor-mobile">Diagnostics</button>
+      <button type="button" id="clear-chat-mobile">Clear chat</button>
+    </nav>
+
+    <section class="conversation" aria-label="AI conversation" id="conversation" aria-live="polite">
+      <div class="welcome" id="welcome">
+        <div class="orb" aria-hidden="true">✳</div>
+        <span class="eyebrow">MEET YOUR WORKSPACE</span>
+        <h1>Big ideas.<br><em>Better execution.</em></h1>
+        <p>A beautiful, focused iPhone interface for your Claw-powered assistant. Ask a question, inspect your project, or plan what comes next.</p>
+        <div class="suggestions">
+          <button class="suggestion" type="button" data-prompt="Summarize the structure of this repository and identify where I should start."><span>⌘</span> Explore my project <b>↗</b></button>
+          <button class="suggestion" type="button" data-prompt="Review the architecture of this Claw project and suggest three practical reliability improvements."><span>◇</span> Review architecture <b>↗</b></button>
+          <button class="suggestion" type="button" data-prompt="Draft a concise, realistic improvement roadmap for this application, with testing and security first."><span>✧</span> Plan improvements <b>↗</b></button>
+        </div>
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="busy" id="busy" hidden aria-live="polite"><span class="loader"></span> Claw is thinking…</div>
+      <div class="diagnostics" id="diagnostics" hidden>
+        <div class="diagnostics-head"><strong id="diagnostics-label">Diagnostics</strong><button id="close-diagnostics" type="button" aria-label="Close diagnostics">×</button></div>
+        <pre id="diagnostics-output"></pre>
+      </div>
+    </section>
+
+    <footer class="composer-wrap">
+      <div class="composer-container">
+        <div class="compose-head">
+          <label for="mode" class="mode-label">AGENT PERMISSIONS</label>
+          <select id="mode" aria-label="Agent permission mode">
+            <option value="read-only">Read only · default</option>
+            <option value="workspace-write">Workspace write · confirm</option>
+          </select>
+        </div>
+        <form class="composer" id="chat-form">
+          <label class="sr-only" for="prompt">Message Claw</label>
+          <textarea id="prompt" placeholder="Ask Claw anything about your project…" rows="2" maxlength="6000" required></textarea>
+          <div class="compose-foot">
+            <small id="input-hint">Your assistant runs on your connected Claw host.</small>
+            <button class="send" type="submit" id="send" aria-label="Send message"><span>↑</span></button>
+          </div>
+        </form>
+        <div class="footer-line"><span id="notice" role="status">Conversations are stored on this device until cleared.</span><span class="desktop-only">CLAW / 2026</span></div>
+      </div>
+    </footer>
+  </main>
+</div>
+<div class="unlock-gate" id="unlock-gate" role="dialog" aria-modal="true" aria-labelledby="unlock-title" hidden>
+  <form id="unlock-form" class="unlock-card">
+    <div class="unlock-symbol" aria-hidden="true">⌁</div>
+    <span class="eyebrow">PRIVATE · OWNER ACCESS</span>
+    <h2 id="unlock-title">Welcome back.</h2>
+    <p>Enter the private owner key displayed on the trusted machine that runs Claw. It is never stored on your phone.</p>
+    <label for="owner-key">OWNER KEY</label>
+    <input type="password" id="owner-key" placeholder="Paste your private owner key" autocomplete="off" autocapitalize="off" spellcheck="false" required minlength="24">
+    <p id="unlock-error" class="unlock-error" role="alert"></p>
+    <button id="unlock-button" type="submit">Unlock workspace <span aria-hidden="true">→</span></button>
+    <small>Keep Tailscale connected on your iPhone. Never share the owner key.</small>
+  </form>
+</div>
+</body>
+</html>

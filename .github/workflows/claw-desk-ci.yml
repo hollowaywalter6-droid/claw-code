@@ -1,0 +1,44 @@
+name: Claw Desk mobile app CI
+
+on:
+  push:
+    paths:
+      - "apps/claw-desk/**"
+      - ".github/workflows/claw-desk-ci.yml"
+  pull_request:
+    paths:
+      - "apps/claw-desk/**"
+      - ".github/workflows/claw-desk-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile Python and run isolated security/API regressions
+        run: |
+          python -m compileall -q apps/claw-desk
+          python -m unittest discover -s apps/claw-desk/tests -v
+      - name: Validate browser script and manifest
+        run: |
+          node --check apps/claw-desk/static/app.js
+          python -m json.tool apps/claw-desk/static/manifest.webmanifest >/dev/null
+      - name: Verify iPhone asset integrity
+        run: |
+          python - <<'PY'
+          import struct
+          from pathlib import Path
+          icon = Path('apps/claw-desk/static/icon-180.png').read_bytes()
+          assert icon.startswith(b'\x89PNG\r\n\x1a\n')
+          width, height = struct.unpack(">II", icon[16:24])
+          assert (width, height) == (180, 180)
+          print('PASS: valid signature and 180x180 icon dimensions')
+          PY
