@@ -412,7 +412,7 @@ class DeskHandler(BaseHTTPRequestHandler):
             return self.feature_error(exc)
         except ValueError as exc:
             return self.send_json(400,{"error":str(exc)})
-        return self.send_json(404,{"error":"Not found.")
+        return self.send_json(404,{"error":"Not found."})
 
 
 def run_claw_prompt(server, prompt, mode="read-only", wait=False):
