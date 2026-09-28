@@ -155,6 +155,44 @@
       reader.readAsDataURL(blob);
     });
   }
+  async function normalizePhonePhoto(file) {
+    const direct=["image/png","image/jpeg","image/webp"];
+    if (direct.includes(file.type)&&file.size<=6000000) return file;
+    if (!file.type.startsWith("image/")&&!/\.(heic|heif|jpg|jpeg|png|webp)$/i.test(file.name)) return file;
+    // Safari can provide iPhone photos in HEIC. Convert to a bounded JPEG
+    // on the device, so no unsupported HEIC bytes reach the AI provider.
+    let picture, objectURL;
+    try {
+      if ("createImageBitmap" in window) {
+        try { picture=await createImageBitmap(file); } catch (_) {}
+      }
+      if (!picture) {
+        objectURL=URL.createObjectURL(file);
+        picture=await new Promise((resolve,reject)=>{
+          const image=new Image();
+          image.onload=()=>resolve(image);
+          image.onerror=()=>reject(Error("Unable to decode this photo. Try JPEG or PNG."));
+          image.src=objectURL;
+        });
+      }
+      const width=picture.width||picture.naturalWidth;
+      const height=picture.height||picture.naturalHeight;
+      if (!width||!height) throw Error("Invalid photo dimensions.");
+      const scale=Math.min(1,2048/Math.max(width,height));
+      const canvas=document.createElement("canvas");
+      canvas.width=Math.max(1,Math.round(width*scale));
+      canvas.height=Math.max(1,Math.round(height*scale));
+      const context=canvas.getContext("2d");
+      if (!context) throw Error("Photo conversion unavailable.");
+      context.drawImage(picture,0,0,canvas.width,canvas.height);
+      const converted=await new Promise(resolve=>canvas.toBlob(resolve,"image/jpeg",0.82));
+      if (!converted) throw Error("Photo conversion failed.");
+      return new File([converted],file.name.replace(/\.[^.]+$/,"")+".jpg",{type:"image/jpeg"});
+    } finally {
+      if (picture&&typeof picture.close==="function") picture.close();
+      if (objectURL) URL.revokeObjectURL(objectURL);
+    }
+  }
   async function uploadFiles(event) {
     const items=[...(event.target.files||[])]; event.target.value="";
     if (items.length+attachments.length>3) {
@@ -163,8 +201,9 @@
     if (!ready||busy) return;
     $("attach-button").disabled=true;
     try {
-      for (const file of items) {
-        if (file.size>6000000||!file.size) throw Error("Each attachment must be between 1 byte and 6 MB.");
+      for (const original of items) {
+        const file=await normalizePhonePhoto(original);
+        if (file.size>6000000||!file.size) throw Error("Each attachment must be between 1 byte and 6 MB after photo optimization.");
         let mime=file.type;
         if (!mime&&file.name.toLowerCase().endsWith(".pdf")) mime="application/pdf";
         if (!mime&&file.name.toLowerCase().endsWith(".txt")) mime="text/plain";
