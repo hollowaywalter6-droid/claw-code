@@ -111,9 +111,28 @@
     } catch (error) { ownerKey=""; $("unlock-error").textContent=error.message; }
     finally { $("unlock-button").disabled=false; }
   }
+  function stopLocalMedia() {
+    if (recognition) {
+      recognition.onresult=null;
+      recognition.onerror=null;
+      recognition.onend=null;
+      try { recognition.abort(); } catch (_) {}
+      recognition=null;
+    }
+    if (recorder) {
+      const active=recorder;
+      recorder=null;
+      active.onstop=null; // shutdown must not trigger a delayed upload
+      try { if (active.state!=="inactive") active.stop(); } catch (_) {}
+      try { active.stream.getTracks().forEach(track=>track.stop()); } catch (_) {}
+    }
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    $("voice-button").textContent="🎙 Speak";
+  }
   async function shutdown() {
     if (!ownerKey||!csrf) return;
     if (!window.confirm("EMERGENCY STOP\n\nShut down Claw Desk and cancel active Claw tasks now? You must restart the trusted host to reconnect.")) return;
+    stopLocalMedia();
     $("kill-switch").disabled=true;
     try {
       const result=await request("/api/shutdown",{method:"POST"});
