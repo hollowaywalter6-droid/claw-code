@@ -27,6 +27,7 @@ targets:
         NSMicrophoneUsageDescription: "Claw Desk uses the microphone only when you choose to dictate a message."
         NSSpeechRecognitionUsageDescription: "Speech recognition converts your chosen voice recordings into text."
         NSPhotoLibraryUsageDescription: "Select photos to attach to a Claw conversation."
+        NSCameraUsageDescription: "Use the camera only when you choose to attach a new photo."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.holloway.clawdesk
