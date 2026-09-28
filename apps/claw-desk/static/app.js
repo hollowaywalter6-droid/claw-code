@@ -495,7 +495,8 @@
     if (!Number.isFinite(date.getTime())) {result("task-results","Select a valid future date.");return;}
     const kind=$("task-kind").value,prompt=$("task-prompt").value,
       interval_seconds=Number($("task-repeat").value);
-    if (!window.confirm("Schedule this read-only "+kind.replaceAll("_"," ")+" job? It will run on your trusted host when online.")) return;
+    const providerDisclosure=kind==="prompt"?"":"\\nThis digest will send retrieved Gmail snippets/calendar event metadata to the configured AI provider.";
+    if (!window.confirm("Schedule this read-only "+kind.replaceAll("_"," ")+" job? It will run on your trusted host when online."+providerDisclosure)) return;
     try {
       await request("/api/tasks/create",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({kind,prompt,run_at:date.toISOString(),interval_seconds})});
