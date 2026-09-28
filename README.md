@@ -1,5 +1,7 @@
 # Claw Code
 
+> **iPhone companion:** [Claw Desk — mobile-first PWA](apps/claw-desk/README.md) adds a private, owner-unlocked chat workspace with an emergency host shutdown switch. Runs on a trusted Claw host and installs from Safari's Add to Home Screen; it is not a standalone iOS model runtime.
+
 <p align="center">
   <a href="https://github.com/code-yeongyu/lazycodex">
     <img src="https://img.shields.io/badge/LazyCodex-codex%20for%20no--brainers-111111?style=for-the-badge&logo=github&logoColor=white" alt="LazyCodex banner" />
