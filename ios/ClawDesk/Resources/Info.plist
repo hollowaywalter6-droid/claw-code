@@ -16,4 +16,5 @@
 <key>NSMicrophoneUsageDescription</key><string>Only access microphone after you tap the Speak button.</string>
 <key>NSSpeechRecognitionUsageDescription</key><string>Dictate selected messages by voice.</string>
 <key>NSPhotoLibraryUsageDescription</key><string>Choose photos to attach to conversations.</string>
+<key>NSCameraUsageDescription</key><string>Use the camera only when you choose to attach a new photo.</string>
 </dict></plist>
