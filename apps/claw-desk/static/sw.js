@@ -1,5 +1,5 @@
 /* Cache only public interface assets; never cache any /api response or message. */
-const CACHE = "claw-desk-static-v1";
+const CACHE = "claw-desk-static-v3";
 const ASSETS = ["/", "/app.css", "/app.js", "/manifest.webmanifest", "/favicon.svg", "/icon-180.png"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));

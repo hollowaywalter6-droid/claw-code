@@ -1,20 +1,26 @@
-# Claw Desk · iPhone Web App (owner controlled)
+# Claw Desk v0.3 — iPhone AI command center
 
-Claw Desk is a **mobile-first, installable web companion** for this repo's existing Rust `claw` CLI. It does not pretend to run the Rust CLI or a model natively on an iPhone: a trusted always-on computer or private server runs Claw, and your iPhone accesses its interface using **private Tailscale Serve HTTPS**. This design needs no Apple Developer account, Xcode, or App Store distribution.
+Claw Desk is a **mobile-first Safari Home Screen app** backed by this fork's real Rust `claw` CLI on a trusted host. A separately scaffolded SwiftUI app is under [`ios/ClawDesk/`](../../ios/ClawDesk/). The iPhone app is a remote client; the Rust CLI and cloud models **do not run inside the Safari PWA**.
 
-## What works
+## Available features
 
-- Standalone iPhone Home Screen experience (PWA), safe-area layout and large tap targets.
-- Private owner-key unlock; key stays in page memory and is never saved to browser storage.
-- Read-only prompts by default, optional explicitly confirmed workspace-write mode.
-- Chat history stored locally in the browser (last 60 entries), bounded context replay (last 8).
-- System status and health checks from the real Rust CLI.
-- Visible **red ⏻ emergency owner shutdown** in the top bar, including on iPhone. After confirmation the host invalidates the session token, kills active Claw child processes (and their Unix process groups), and stops the HTTP server. No remote restart bypass is built in.
-- Only static UI files are cached by the service worker. AI requests and owner credentials are never cached.
+| Feature | Implementation and important limitation |
+| --- | --- |
+| Chat + recent conversation history | Existing Claw CLI; last 60 role entries in browser localStorage; bounded eight-entry context replay. No false claim of shared native Claw session resume. |
+| Voice conversation | Microphone dictation using browser SpeechRecognition where available; otherwise optional audio recording and host-side OpenAI Whisper transcription when `OPENAI_API_KEY` is set. Browser `speechSynthesis` can read replies aloud and each reply has a Listen button. Secure context/microphone consent required. |
+| Attach photos, PDFs, text | Up to three per message, each at most 6 MB, retained in host memory for one hour; image/PDF turns use direct Anthropic multimodal Messages API, and **do not have Claw file-edit tools**. This mode needs `ANTHROPIC_API_KEY` on the host and sends selected attachments to that provider. |
+| Google Drive | Optional separately authorized Google OAuth web client; name search and provider links (up to 20 recent matches). Read-only Drive scope. |
+| Gmail | Read recent inbox subject, sender, date and snippets; create an **unsent draft** only after confirmation. No automatic email-send endpoint. |
+| Google Calendar | Read upcoming events and create individual calendar events only after explicit confirmation. |
+| Agent Council | Three actual sequential Claw runs: read-only Architect, scoped Executor, read-only Reviewer. The Executor can write only with explicit permission. This is not 35 simultaneous agents and does not falsely claim full test verification. |
+| Autonomous scheduled tasks | Host-side SQLite tasks: once/hourly/daily/weekly AI prompts and optional inbox/calendar briefs. Execution remains read-only, while the trusted host is online; results can be inspected on iPhone. No native push or automatic mail send. |
+| Owner emergency shutdown | Visible red power button invalidates the token, stops new requests, kills tracked CLI subprocesses/process groups (Unix), then stops the web host. Restart the trusted host manually. |
+| Native offline processing | The SwiftUI companion's offline tab runs Apple's on-device Natural Language language and named-entity detection without an internet connection. It is **not** a generative offline LLM. |
+| Native iOS build / App Store preparation | XcodeGen SwiftUI source target is provided; you must compile, sign and install via Xcode/TestFlight, provide store assets/privacy details and obtain Apple's review before App Store distribution. |
 
-## Host setup (Mac, Linux, Windows with Python 3)
+## 1. Run Claw Desk on the trusted host (not on the iPhone)
 
-On the **trusted host**, not on the iPhone:
+The Rust CLI needs an actual provider API credential (a subscription login alone is not necessarily an API credential):
 
 ```bash
 git clone --branch feat/claw-desk-web-app https://github.com/hollowaywalter6-droid/claw-code.git
@@ -22,65 +28,82 @@ cd claw-code/rust
 cargo build -p rusty-claude-cli
 cd ..
 
-# Configure a real provider on the HOST only (example):
-export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
+# Keep secrets on this host, never in Github or browser source.
+export ANTHROPIC_API_KEY="your-provider-api-key"
+# Needed ONLY for the recorded-audio transcription fallback.
+export OPENAI_API_KEY="your-openai-api-key"
 
-# Optional: supply your own random >=24-character key.
-# If omitted, the host prints a generated key once on startup.
+# Optional: set a long private owner key, otherwise startup prints a generated one.
 export CLAW_DESK_OWNER_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
-
-# Local preview, only on the host:
 python3 apps/claw-desk/server.py
-# Browser: http://127.0.0.1:8765
+# Host-only preview: http://127.0.0.1:8765
 ```
 
-For Windows PowerShell: set provider and owner key with `$env:ANTHROPIC_API_KEY = "..."` and `$env:CLAW_DESK_OWNER_KEY = python -c "import secrets; print(secrets.token_urlsafe(32))"`. Build from `rust` as above. No API keys or private credentials belong in GitHub.
+For Windows use PowerShell's `$env:NAME = "value"` and `python apps/claw-desk/server.py`. When building, the executable is `rust/target/debug/claw.exe`. The app is dependency-free on the Python side and requires Python 3.10+.
 
-If the Claw binary is absent, the interface still loads, but chat is unavailable; build `rusty-claude-cli` first. The host remains responsible for API connectivity and cost.
+Model selection for attachment turns can be changed with `CLAW_DESK_MULTIMODAL_MODEL` (default `claude-sonnet-4-6`). The provider you configure must support Anthropic image/PDF input.
 
-## Use it on your iPhone from anywhere in your private Tailscale network
+## 2. Connect Google ONCE from your trusted host
 
-1. Install/sign in to Tailscale on the host **and your iPhone**, under your trusted tailnet. Limit Serve access in your tailnet ACLs to your intended devices/users.
-2. Find/enable your tailnet's private HTTPS and DNS hostname using Tailscale. It looks like `https://host-name.tailnet-name.ts.net`.
-3. Stop any local preview server, then relaunch the server on the trusted host with its exact HTTPS origin:
+The Google connectors you may have installed in ChatGPT are **not automatically accessible in this independent Claw app**. The host needs its own Google Cloud OAuth web-client ID and secret.
+
+1. In your Google Cloud project, enable Google Drive API, Gmail API and Calendar API. Configure the OAuth consent screen/testing users and the requested Drive/Gmail/Calendar scopes. Public production use of some Gmail scopes may require Google's independent verification.
+2. Create **OAuth Client ID → Web application** and register exactly this redirect URI for a one-time host-side pairing: `http://localhost:8765/api/google/callback`.
+3. On your trusted host set:
 
    ```bash
-   export CLAW_DESK_PUBLIC_ORIGIN="https://host-name.tailnet-name.ts.net"
+   export CLAW_DESK_GOOGLE_CLIENT_ID="...apps.googleusercontent.com"
+   export CLAW_DESK_GOOGLE_CLIENT_SECRET="your-oauth-web-client-secret"
    python3 apps/claw-desk/server.py
    ```
 
-   On PowerShell: `$env:CLAW_DESK_PUBLIC_ORIGIN = "https://host-name.tailnet-name.ts.net"`, then `python apps/claw-desk/server.py`.
-4. In a separate host terminal, expose the localhost service privately:
+4. Open **http://localhost:8765** on the trusted host itself, enter the owner key, choose **Integrations → Connect Google** and finish the external Google consent flow. Then tap Refresh connection.
+5. OAuth refresh credentials are saved outside the Git repository in `~/.claw-desk/google-oauth.json`, private file permissions on Unix. Treat the trusted host as a sensitive machine. Do not upload its config directory to Github.
+6. Stop that preview host and relaunch with the private iPhone Tailscale origin below; the same saved Google token powers the phone's integrations.
+
+The localhost setup is intentional: a third-party `*.ts.net` redirect URI may be rejected by Google Cloud's domain/redirect restrictions, while localhost redirects on the trusted host avoid the phone-loopback problem. Google sign-in in an embedded native WKWebView should be completed through Safari or, preferably, paired on the host first.
+
+**Privacy:** Creating a scheduled Gmail/calendar digest explicitly authorizes retrieval of the necessary metadata/snippets and submission of that context to your configured AI provider. For photo/PDF turns, the selected file bytes are likewise sent to the configured multimodal provider. The UI never embeds provider API keys.
+
+## 3. Use it on iPhone with PRIVATE HTTPS (Safari PWA)
+
+1. Install Tailscale on your trusted host and iPhone, sign into the same controlled tailnet and restrict access with your tailnet ACLs. Do not publicly expose Claw.
+2. Identify the trusted host's private HTTPS URL (example: `https://your-device.tailnet-name.ts.net`).
+3. On the trusted host, stop the localhost preview and restart Claw Desk:
+
+   ```bash
+   export CLAW_DESK_PUBLIC_ORIGIN="https://your-device.tailnet-name.ts.net"
+   python3 apps/claw-desk/server.py
+   ```
+
+4. In another host terminal:
 
    ```bash
    tailscale serve --bg 8765
    tailscale serve status
    ```
 
-5. On the iPhone, open the private HTTPS URL in Safari, tap **Share → Add to Home Screen**, keep **Open as Web App** enabled, then tap **Add**. Open the Home Screen icon and enter the host's **owner key**.
-6. Check Status, then send your first message.
+5. On iPhone open that exact private HTTPS URL in Safari. Use **Share → Add to Home Screen → Open as Web App → Add**. Launch the Home Screen icon and enter the owner key from the host.
 
-**Do not use `tailscale funnel`, public port forwarding, a public reverse proxy, or expose port 8765 to your LAN.** The server deliberately binds to `127.0.0.1` only and accepts only the explicitly configured private HTTPS *.ts.net origin (plus local loopback). PWA offline mode loads only its visual shell, not chat or host AI features.
+Never use `tailscale funnel`, public port-forwarding or a general-purpose public reverse proxy. Port 8765 binds to host loopback only. A Home Screen PWA may show its static interface when offline, but cannot run chat, autonomous tasks or model inference while disconnected from the host. The native SwiftUI target can still run its local Offline Insights tab.
 
-## Emergency shutdown (owner kill switch)
+## 4. What the new tabs do
 
-Tap the **red power ⏻ button** in the top bar, then explicitly confirm. The request requires the current ephemeral session token and the owner's private key. It sets a server-wide stop flag, invalidates the token, terminates tracked Claw CLI jobs (including the Unix process group where available), and shuts down the web host. Chat immediately stops accepting requests. The current page may remain visible, but it is disconnected.
+**Assistant:** regular Claw CLI prompts; Attach opens the iPhone photo/file picker (PNG/JPEG/WEBP/PDF/TXT); Speak starts browser dictation or recorded transcription fallback; Voice reply toggles text-to-speech. Voice and attachment permissions are requested by the browser when needed.
 
-**Restart:** access the trusted host and run `python3 apps/claw-desk/server.py` again. If Tailscale Serve remains enabled, its URL reconnects when the host restarts. To also remove the reverse-proxy configuration, run `tailscale serve reset` on the host. You cannot use this web app to remotely power off the computer, revoke Tailscale, or restart an already stopped server.
+**Agent Council:** enter a project task; choose read-only for a full proposal/review, or explicitly authorize workspace-write for the Executor. The UI polls role outputs. A Reviewer inspection does not replace actual unit tests, and the Council does not publish changes to GitHub automatically.
 
-The owner key is intentionally **not a hidden backdoor**, is never included in API responses, and is not stored in the PWA; closing/reloading the page requires unlocking again. Treat the key as a secret. The visible bootstrap nonce alone cannot authorize commands.
+**Integrations:** Google consent, Drive filename search with source links, Gmail inbox snippets, calendar list, explicitly reviewed Gmail drafts and events. The app cannot send emails; open Gmail to inspect and send a draft yourself.
 
-## Security and limitations
+**Scheduled Tasks:** set your start time on the iPhone and choose once/hourly/daily/weekly. The trusted host persists tasks/results in `~/.claw-desk/scheduled-tasks.sqlite3`. Read your results and remove tasks from the mobile tab. The job runner runs only while the host is powered on; there are no guaranteed background iOS push notifications.
 
-- Browser-to-host: private HTTPS through Tailscale Serve; loopback HTTP on the host.
-- Only known CLI actions are exposed: `prompt`, `status`, `doctor`. No general shell HTTP endpoint or unbounded CLI arguments.
-- Read-only is the default. Workspace-write can change files; the UI asks for confirmation before selecting it.
-- Chat history uses the iPhone browser's localStorage; use **Clear chat** to remove it. Native Claw CLI session persistence is not represented as a mobile app feature.
-- A stopped/offline host cannot be reached from the phone. A service worker may still show cached UI but not fabricate AI responses.
-- The kill switch is best effort for subprocess cleanup on Windows and explicitly kills the entire spawned process group on Unix.
-- No iPhone App Store package, microphone/transcription, camera upload, native push or remote hosting is claimed in this MVP.
+**Emergency stop:** red `⏻` → confirm. Cancels tracked child processes and shuts down the web server; the host must be manually restarted. This does not shut down unrelated processes or the whole computer.
 
-## Tests
+## 5. Optional native app source
+
+See [`ios/ClawDesk/README.md`](../../ios/ClawDesk/README.md) for the SwiftUI / XcodeGen source, device installation and independent offline NLP analysis. A signed App Store binary cannot be produced or published without your Apple team/signing and Apple's review. Full on-device *generative* AI still requires integration and profiling of a license-compatible model/tokenizer; its absence is not disguised by the text-analysis screen.
+
+## Verification
 
 ```bash
 python3 -m unittest discover -s apps/claw-desk/tests -v
@@ -88,4 +111,4 @@ python3 -m compileall -q apps/claw-desk
 node --check apps/claw-desk/static/app.js
 ```
 
-The Python suite tests auth, invalid input, private origin, CLI contract and authenticated remote shutdown without a live provider key.
+Mobile CI also checks the manifest and app icon. The separate iOS workflow compiles the SwiftUI target without signing where an Xcode runner is available. No actual provider keys, Google OAuth session or iPhone App Store review are exercised by these mocked tests.

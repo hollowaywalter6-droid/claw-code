@@ -1,0 +1,36 @@
+name: Claw Desk native iOS source CI
+
+on:
+  push:
+    paths:
+      - "ios/ClawDesk/**"
+      - ".github/workflows/claw-desk-ios.yml"
+  pull_request:
+    paths:
+      - "ios/ClawDesk/**"
+      - ".github/workflows/claw-desk-ios.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile-ios:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen (if needed)
+        run: command -v xcodegen || brew install xcodegen
+      - name: Generate native Xcode project
+        working-directory: ios/ClawDesk
+        run: xcodegen generate
+      - name: Compile native SwiftUI / NaturalLanguage target without signing
+        working-directory: ios/ClawDesk
+        run: |
+          xcodebuild -project ClawDesk.xcodeproj \
+            -scheme ClawDesk \
+            -configuration Debug \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath "$RUNNER_TEMP/ClawDeskDerived" \
+            CODE_SIGNING_ALLOWED=NO build

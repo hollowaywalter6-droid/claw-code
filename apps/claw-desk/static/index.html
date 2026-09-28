@@ -24,7 +24,10 @@
     </a>
     <div class="sidebar-group">
       <p class="eyebrow">WORKSPACE</p>
-      <span class="nav-item active"><span aria-hidden="true">◈</span> Assistant <small>01</small></span>
+      <button class="nav-item button-nav active" id="nav-chat" type="button"><span aria-hidden="true">◈</span> Assistant <small>01</small></button>
+      <button class="nav-item button-nav" id="nav-agents" type="button"><span aria-hidden="true">◇</span> Agent Council <small>03</small></button>
+      <button class="nav-item button-nav" id="nav-integrations" type="button"><span aria-hidden="true">↗</span> Integrations <small>G</small></button>
+      <button class="nav-item button-nav" id="nav-tasks" type="button"><span aria-hidden="true">◷</span> Scheduled Tasks <small>∞</small></button>
       <button class="nav-item button-nav" id="check-status" type="button"><span aria-hidden="true">◎</span> Check status <small>↗</small></button>
       <button class="nav-item button-nav" id="run-doctor" type="button"><span aria-hidden="true">✳</span> Diagnostics <small>↗</small></button>
       <button class="nav-item button-nav" id="clear-chat-side" type="button"><span aria-hidden="true">⊘</span> Clear conversation <small>×</small></button>
@@ -32,7 +35,7 @@
     <div class="sidebar-bottom">
       <span class="eyebrow">PRIVACY FIRST</span>
       <p>One trusted device runs Claw. Your phone is the interface. API keys never need to be entered here.</p>
-      <span class="sidebar-meta">v0.1 · Local / Private HTTPS</span>
+      <span class="sidebar-meta">v0.3 · Private / iPhone</span>
     </div>
   </aside>
 
@@ -52,10 +55,100 @@
     <nav class="mobile-tools" id="mobile-tools" aria-label="Tools" hidden>
       <button type="button" id="status-mobile">Status</button>
       <button type="button" id="doctor-mobile">Diagnostics</button>
+      <button type="button" data-panel="chat">Chat</button>
+      <button type="button" data-panel="agents">Council</button>
+      <button type="button" data-panel="integrations">Google</button>
+      <button type="button" data-panel="tasks">Tasks</button>
       <button type="button" id="clear-chat-mobile">Clear chat</button>
     </nav>
 
-    <section class="conversation" aria-label="AI conversation" id="conversation" aria-live="polite">
+    <section class="conversation" aria-label="AI workspace" id="conversation" aria-live="polite">
+      <div class="features" id="feature-panel" hidden>
+        <div class="feature-content" id="panel-agents" hidden>
+          <span class="eyebrow">MULTI-ROLE ORCHESTRATION</span>
+          <h2>Agent Council <small>03</small></h2>
+          <p>Architect → Executor → Reviewer. Separate sequential Claw prompts with independent role instructions. Only the Executor may write, and only after you explicitly authorize it.</p>
+          <form id="agent-form" class="feature-form">
+            <label for="agent-task">COUNCIL TASK</label>
+            <textarea id="agent-task" maxlength="5000" rows="4" placeholder="Describe the feature or bug you want the Council to investigate…" required></textarea>
+            <label for="agent-mode">EXECUTOR PERMISSIONS</label>
+            <select id="agent-mode"><option value="read-only">Read-only: proposal, no edits</option><option value="workspace-write">Workspace-write: allow permitted edits</option></select>
+            <label class="check-row"><input id="agent-confirm" type="checkbox"> I authorize workspace file changes when write mode is selected.</label>
+            <button type="submit" class="primary-action" id="agent-launch">Run 3-role Council →</button>
+          </form>
+          <pre class="result-box" id="agent-result" aria-live="polite">No Council run started.</pre>
+        </div>
+        <div class="feature-content" id="panel-integrations" hidden>
+          <span class="eyebrow">CONNECTED SERVICES</span>
+          <h2>Google workspace</h2>
+          <p>Connect your own Google OAuth client on the trusted host. Read Drive, check Gmail and Calendar, create explicitly confirmed Gmail drafts and calendar events. Nothing is automatically sent.</p>
+          <div class="feature-actions">
+            <button id="google-connect" type="button" class="primary-action">Connect Google →</button>
+            <button id="google-refresh" type="button" class="secondary-action">Refresh connection</button>
+          </div>
+          <p id="google-status" class="feature-status" role="status">Check your connection.</p>
+          <div class="feature-block">
+            <h3>Google Drive</h3>
+            <form id="drive-form" class="horizontal-form">
+              <label class="sr-only" for="drive-query">Search file names</label>
+              <input id="drive-query" maxlength="120" placeholder="Search Drive files…">
+              <button type="submit">Find files</button>
+            </form>
+            <pre id="drive-results" class="result-box">No search yet.</pre>
+          </div>
+          <div class="feature-block">
+            <h3>Inbox and calendar</h3>
+            <div class="feature-actions">
+              <button type="button" class="secondary-action" id="google-mail">Read latest inbox</button>
+              <button type="button" class="secondary-action" id="google-calendar">Upcoming calendar</button>
+            </div>
+            <pre class="result-box" id="google-results">No data retrieved.</pre>
+          </div>
+          <div class="feature-block">
+            <h3>Create Gmail draft (does not send)</h3>
+            <form id="draft-form" class="feature-form">
+              <label class="sr-only" for="draft-to">Recipient</label>
+              <input id="draft-to" type="email" placeholder="Recipient email" required maxlength="254">
+              <label class="sr-only" for="draft-subject">Subject</label>
+              <input id="draft-subject" placeholder="Subject" maxlength="180" required>
+              <label class="sr-only" for="draft-body">Body</label>
+              <textarea id="draft-body" rows="3" maxlength="10000" placeholder="Message body" required></textarea>
+              <button class="secondary-action" type="submit">Review and create draft →</button>
+            </form>
+          </div>
+          <div class="feature-block">
+            <h3>Create calendar event</h3>
+            <form id="event-form" class="feature-form">
+              <label for="event-title">EVENT TITLE</label><input id="event-title" maxlength="180" required>
+              <label for="event-start">START (YOUR LOCAL TIME)</label><input id="event-start" type="datetime-local" required>
+              <label for="event-end">END (YOUR LOCAL TIME)</label><input id="event-end" type="datetime-local" required>
+              <button class="secondary-action" type="submit">Review and create event →</button>
+            </form>
+          </div>
+        </div>
+        <div class="feature-content" id="panel-tasks" hidden>
+          <span class="eyebrow">AUTONOMOUS · OWNER CONFIGURED</span>
+          <h2>Scheduled tasks</h2>
+          <p>Create bounded, read-only jobs that run on the trusted host while it is online. Results are saved to the host and visible here; scheduled tasks cannot secretly send mail or edit your files.</p>
+          <form id="task-form" class="feature-form">
+            <label for="task-kind">TASK TYPE</label>
+            <select id="task-kind">
+              <option value="prompt">AI prompt / research summary</option>
+              <option value="inbox_digest">Gmail inbox digest</option>
+              <option value="calendar_digest">Upcoming calendar digest</option>
+              <option value="combined_digest">Inbox + calendar briefing</option>
+            </select>
+            <label for="task-prompt">INSTRUCTIONS</label>
+            <textarea id="task-prompt" rows="3" maxlength="3000" placeholder="For example: summarize priorities and action items."></textarea>
+            <label for="task-date">FIRST RUN (LOCAL TIME)</label><input id="task-date" type="datetime-local" required>
+            <label for="task-repeat">REPEAT</label>
+            <select id="task-repeat"><option value="0">Once</option><option value="3600">Every hour</option><option value="86400">Daily</option><option value="604800">Weekly</option></select>
+            <button type="submit" class="primary-action">Create task →</button>
+          </form>
+          <div class="feature-actions"><button type="button" class="secondary-action" id="refresh-tasks">Refresh results</button></div>
+          <div id="task-results" class="task-results" aria-live="polite">No tasks loaded yet.</div>
+        </div>
+      </div>
       <div class="welcome" id="welcome">
         <div class="orb" aria-hidden="true">✳</div>
         <span class="eyebrow">MEET YOUR WORKSPACE</span>
@@ -84,9 +177,16 @@
             <option value="workspace-write">Workspace write · confirm</option>
           </select>
         </div>
+        <div class="upload-tray" id="upload-tray" aria-live="polite" hidden></div>
         <form class="composer" id="chat-form">
+          <input class="sr-only" id="file-picker" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,.pdf,.txt" multiple>
+          <div class="compose-media">
+            <button type="button" id="attach-button" title="Attach image, PDF, or text" aria-label="Attach photo or PDF">＋ Attach</button>
+            <button type="button" id="voice-button" title="Dictate a message" aria-label="Record voice message">🎙 Speak</button>
+            <button type="button" id="tts-button" title="Read AI answers aloud" aria-pressed="false">◖ Voice reply: off</button>
+          </div>
           <label class="sr-only" for="prompt">Message Claw</label>
-          <textarea id="prompt" placeholder="Ask Claw anything about your project…" rows="2" maxlength="6000" required></textarea>
+          <textarea id="prompt" placeholder="Ask Claw anything about your project…" rows="2" maxlength="6000"></textarea>
           <div class="compose-foot">
             <small id="input-hint">Your assistant runs on your connected Claw host.</small>
             <button class="send" type="submit" id="send" aria-label="Send message"><span>↑</span></button>
